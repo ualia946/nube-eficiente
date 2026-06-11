@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:16
+    container_name: cloudwise-db
+    environment:
+      POSTGRES_USER: cloudwise
+      POSTGRES_PASSWORD: cloudwise_dev
+      POSTGRES_DB: cloudwise
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  
+  web:
+    image: dpage/pgadmin4:latest
+    container_name: cloudwise-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cloudwise.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+volumes:
+  postgres_data:

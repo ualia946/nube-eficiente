@@ -1,0 +1,24 @@
+# entorno virtual
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# credenciales y configuración local
+.env
+
+# base de datos local (si usas SQLite para tests)
+*.db
+*.sqlite
+
+# IDEs
+.vscode/
+.idea/
+
+# archivos de sistema
+.DS_Store
+Thumbs.db
