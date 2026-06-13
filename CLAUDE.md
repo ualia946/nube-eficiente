@@ -1,48 +1,57 @@
 # nube-eficiente — Contexto del proyecto
 
-## Qué es este proyecto
+## Qué es
 
-Plataforma SaaS de FinOps para gestión y optimización de costes en la nube. Permite a organizaciones conectar sus cuentas cloud (Azure, AWS, GCP), visualizar recursos, rastrear costes y detectar anomalías mediante IA.
+Plataforma SaaS de FinOps para gestión y optimización de costes en la nube. Conecta cuentas
+cloud (Azure, AWS, GCP), ingiere recursos, rastrea costes diarios y detecta anomalías de
+gasto mediante IA.
 
-## Estructura del repositorio
+> La arquitectura detallada, el modelo de datos completo y las decisiones de diseño viven en
+> **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (fuente única de verdad). El flujo de
+> trabajo (ramas, commits, migraciones) está en **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)**.
+> Este documento solo recoge lo esencial de alto uso y mis preferencias de trabajo.
 
-```
-nube-eficiente/
-├── app/                    # Backend Python — única capa Python del proyecto
-│   ├── shared/
-│   │   ├── database/
-│   │   │   ├── models/     # Modelos ORM SQLAlchemy
-│   │   │   ├── migrations/ # Migraciones Alembic (antes alembic/ en raíz)
-│   │   │   ├── base.py     # DeclarativeBase
-│   │   │   └── session.py  # engine + SessionLocal + get_db()
-│   │   ├── providers/      # Abstracción de proveedores cloud
-│   │   │   ├── cloud_provider.py   # ABC con verify_credentials / list_resources / get_costs
-│   │   │   └── azure/
-│   │   └── core/           # Utilidades transversales (vacío aún)
-│   ├── ingestion/          # Lógica de ingesta de recursos cloud (vacío aún)
-│   ├── api/                # API REST backend↔frontend (vacío aún)
-│   ├── ai/                 # Modelo de detección de anomalías (vacío aún)
-│   ├── scripts/            # Scripts de desarrollo y pruebas manuales
-│   ├── alembic.ini         # Configuración de Alembic
-│   ├── pyproject.toml      # Empaquetado Python (where = [".."] apunta a raíz)
-│   └── requirements.txt    # Dependencias Python
-├── frontend/               # React o Astro — no Python, aún vacío
-├── infra/                  # IaC — Terraform y scripts de infraestructura
-├── docs/
-│   └── database/           # Diagrama ER del esquema
-├── docker-compose.yml      # PostgreSQL 16 + pgAdmin 4
-├── .env                    # Variables de entorno (no commitear)
-└── README.md
-```
+## Cómo trabajo en este proyecto (preferencias del usuario)
 
-## Base de datos (PostgreSQL + SQLAlchemy 2.0)
+Sigue estas pautas en cada interacción:
 
-### Modelos principales
+- **Plan-primero.** Ante cambios grandes (una capa nueva, un cambio de esquema, una
+  refactorización amplia), presenta primero un plan o spec y **espera mi aprobación** antes
+  de implementar. La estructura de referencia es [plan-ingesta.md](plan-ingesta.md).
+- **Explica las decisiones.** No entregues solo código: justifica los compromisos y las
+  alternativas descartadas, con un nivel didáctico que me ayude a aprender el porqué.
+- **Estilo de código y commits.** Español para el dominio (modelos, columnas, enums); inglés
+  para infraestructura técnica (métodos, configuración). Commits semánticos con scope:
+  `tipo(scope): descripción en minúsculas` (ej. `feat(providers): ...`).
+- **Tests y verificación.** Acompaña cada cambio con una forma de verificarlo (un script en
+  `app/scripts/` o un test cuando exista la suite) y **propón cómo probarlo** antes de darlo
+  por terminado. Aún no hay suite de tests automatizada.
+- **Política de documentación.** Regla: cada cosa se documenta donde no se desincroniza.
+  Docstrings para lógica de función; `ARCHITECTURE.md` para forma del sistema; `CONTRIBUTING.md`
+  para proceso; `README.md` para estado y quickstart. Detalle completo en
+  [docs/CONTRIBUTING.md — Política de documentación](docs/CONTRIBUTING.md#política-de-documentación).
+
+## Dónde está cada cosa
+
+| Ruta | Contenido |
+|---|---|
+| `app/shared/database/models/` | Modelos ORM SQLAlchemy (8 entidades) |
+| `app/shared/database/{base,session}.py` | `DeclarativeBase`, engine + `get_db()` |
+| `app/shared/database/migrations/` | Migraciones Alembic |
+| `app/shared/providers/` | Abstracción multinube: `cloud_provider.py` (ABC), `schemas.py` (DTOs), `azure/` |
+| `app/{ingestion,api,ai}/` | Capas pendientes (vacías) |
+| `app/scripts/` | Scripts de desarrollo y pruebas manuales |
+
+Estructura completa: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#estructura-del-monorepo).
+
+### Modelos de datos
+
+Para columnas y relaciones exactas **revisa siempre [app/shared/database/models/](app/shared/database/models/)**.
 
 | Modelo | Tabla | PK | Descripción |
 |---|---|---|---|
 | `Organizacion` | `organizacion` | UUID | Tenant raíz; plan: free/pro/enterprise |
-| `Usuario` | `usuario` | UUID | Pertenece a una organización; rol admin flag |
+| `Usuario` | `usuario` | UUID | Pertenece a una organización; flag `es_admin` |
 | `CuentaNube` | `cuenta_nube` | UUID | Credenciales JSONB de proveedor cloud |
 | `AmbitoNodo` | `ambito_nodo` | UUID | Árbol jerárquico de scopes (autorreferencial) |
 | `Recurso` | `recurso` | Integer | Recurso cloud concreto con propiedades JSONB |
@@ -50,62 +59,45 @@ nube-eficiente/
 | `Anomalia` | `anomalia` | Integer | Anomalía detectada: info/warning/high/critical |
 | `Permiso` | `permisos` | (usuario_id, ambito_id) | RBAC: propietario/lector/facturacion |
 
-### Jerarquía de datos
-
-```
-Organizacion
-└── CuentaNube (azure/aws/gcp)
-    └── AmbitoNodo (árbol: subscription → resource_group → ...)
-        ├── Recurso
-        │   ├── RegistroCoste (serie temporal de costes)
-        │   └── Anomalia
-        └── Permiso (usuario ↔ ambito)
-```
+Jerarquía: `Organizacion → CuentaNube → AmbitoNodo (árbol) → Recurso → {RegistroCoste, Anomalia}` + `Permiso (usuario ↔ ambito)`.
 
 ## Comandos frecuentes
 
 ```bash
-# Levantar base de datos local
+# Levantar base de datos local (PostgreSQL + pgAdmin)
 docker-compose up -d
 
 # Instalar paquete Python en modo editable
 cd app && pip install -e .
 
-# Migraciones — SIEMPRE ejecutar desde app/
+# Migraciones — SIEMPRE desde app/
 cd app && alembic upgrade head
 cd app && alembic revision --autogenerate -m "descripcion"
 cd app && alembic downgrade -1
 
-# Variables de entorno necesarias
-DATABASE_URL=postgresql://cloudwise:cloudwise_dev@localhost:5432/cloudwise
-AZURE_TENANT_ID=...
-AZURE_CLIENT_ID=...
-AZURE_CLIENT_SECRET=...
-AZURE_SUBSCRIPTION_ID=...
+# Verificar conexión con Azure
+python app/scripts/test_azure_conection.py
 ```
 
-## Decisiones de diseño
+Variables de entorno: copia `.env.example` a `.env` y rellénalas (`DATABASE_URL` y las
+`AZURE_*`). `.env` está en `.gitignore`.
 
-- **Alembic vive en `app/shared/database/migrations/`** — no en la raíz, porque es una herramienta del backend Python, no del monorepo completo.
-- **`pyproject.toml` en `app/` con `where = [".."]`** — setuptools busca el paquete `app` un nivel arriba (en la raíz del repo). Instalar con `cd app && pip install -e .`.
-- **`frontend/` en la raíz** — React/Astro no es Python; se mantiene separado del paquete Python.
-- **`docker-compose.yml` en la raíz** — orquesta todos los servicios (db, pgadmin, y en el futuro backend/frontend).
-- **Credenciales en JSONB** — el campo `credenciales` de `CuentaNube` almacena las credenciales del proveedor. Pendiente cifrado en reposo.
-- **IDs mixtos** — entidades de negocio principales (organizacion, usuario, cuenta) usan UUID; series temporales (recurso, coste, anomalía) usan Integer autoincremental para eficiencia en inserciones masivas.
+## Convenciones técnicas
 
-## Convenciones
-
-- Idioma del código: **español** para nombres de dominio (modelos, columnas, enums); inglés para infraestructura técnica (métodos de clase, configuración).
-- Enums definidos directamente en SQLAlchemy con `name=` para que Alembic los gestione.
+- Enums definidos en SQLAlchemy con `name=` para que Alembic los gestione como tipos nativos.
 - `func.now()` como `server_default` en timestamps; `onupdate=func.now()` en `fecha_actualizacion`.
 - `get_db()` es un generador para inyección de dependencias (compatible con FastAPI).
+- Los proveedores devuelven DTOs (`ScopeDTO`/`ResourceDTO`), nunca modelos ORM; la traducción
+  DTO → ORM es responsabilidad exclusiva de la capa de ingesta.
 
 ## Estado actual
 
 - [x] Esquema de base de datos completo y migración inicial aplicada
-- [x] Abstracción de proveedor cloud (`CloudProvider` ABC) con implementación Azure parcial
-- [ ] `ingestion/` — lógica de ingesta de recursos pendiente
-- [ ] `api/` — endpoints REST pendientes
-- [ ] `ai/` — modelo de detección de anomalías pendiente
-- [ ] `frontend/` — interfaz React/Astro pendiente
-- [ ] `infra/` — Terraform pendiente
+- [x] Abstracción de proveedor cloud (`CloudProvider` ABC) + DTOs
+- [~] `AzureProvider` — solo `verify_credentials()` implementado
+- [ ] `ingestion/` — ingesta de recursos (especificada en [plan-ingesta.md](plan-ingesta.md))
+- [ ] `api/` — endpoints REST (requiere añadir FastAPI)
+- [ ] `ai/` — modelo de detección de anomalías
+- [ ] `frontend/` — interfaz React/Astro
+- [ ] `infra/` — Terraform
+- [ ] Suite de tests automatizada
