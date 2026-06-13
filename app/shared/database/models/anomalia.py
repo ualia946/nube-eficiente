@@ -5,6 +5,8 @@ from datetime import datetime
 from app.shared.database.base import Base
 
 class Anomalia(Base):
+    """Anomalía de coste detectada sobre un recurso. Recoge severidad, descripción del problema y ahorro estimado."""
+
     __tablename__ = "anomalia"
 
     id: Mapped[int] = mapped_column(

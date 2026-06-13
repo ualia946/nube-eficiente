@@ -16,6 +16,10 @@ SessionLocal = sessionmaker(
 )
 
 def get_db():
+    """Generador de sesión para inyección de dependencias (FastAPI Depends).
+
+    Garantiza que la sesión se cierra aunque ocurra una excepción.
+    """
     db = SessionLocal()
     try:
         yield db

@@ -6,6 +6,12 @@ from datetime import datetime
 from app.shared.database.base import Base
 
 class CuentaNube(Base):
+    """Cuenta de un proveedor cloud vinculada a una organización.
+
+    El campo credenciales almacena en JSONB las claves de autenticación con estructura
+    específica de cada proveedor (ver AzureProvider.from_credentials para el esquema Azure).
+    """
+
     __tablename__ = "cuenta_nube"
 
     id: Mapped[uuid.UUID] = mapped_column(
