@@ -4,6 +4,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.shared.database.base import Base 
 
 class Permiso(Base):
+    """Permiso RBAC de un usuario sobre un scope. La PK es compuesta (id_usuario, id_ambito_nodo)."""
+
     __tablename__ = "permisos"
 
     id_usuario: Mapped[uuid.UUID] = mapped_column(

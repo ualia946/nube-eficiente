@@ -6,6 +6,8 @@ from datetime import datetime
 from app.shared.database.base import Base
 
 class Organizacion(Base):
+    """Tenant raíz de la plataforma. Agrupa usuarios y cuentas cloud bajo un mismo plan de suscripción."""
+
     __tablename__ = "organizacion"
 
     id: Mapped[uuid.UUID] = mapped_column(

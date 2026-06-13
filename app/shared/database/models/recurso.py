@@ -6,6 +6,12 @@ from datetime import datetime
 from app.shared.database.base import Base
 
 class Recurso(Base):
+    """Recurso cloud concreto (VM, base de datos, almacenamiento, etc.) dentro de un scope.
+
+    recurso_ref_id es el ID nativo del proveedor; se usa como clave natural para upserts idempotentes.
+    propiedades almacena metadatos adicionales específicos del proveedor en formato libre (JSONB).
+    """
+
     __tablename__ = "recurso"
 
     id: Mapped[int] = mapped_column(

@@ -6,6 +6,8 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.shared.database.base import Base
 
 class Usuario(Base):
+    """Usuario autenticado perteneciente a una organización. El acceso a scopes concretos se controla mediante Permiso."""
+
     __tablename__ = "usuario"
 
     id: Mapped[uuid.UUID] = mapped_column(

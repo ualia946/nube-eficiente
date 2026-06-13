@@ -7,6 +7,12 @@ from typing import Optional
 from app.shared.database.base import Base
 
 class AmbitoNodo(Base):
+    """Nodo en el árbol de scopes de una cuenta cloud (ej. suscripción → grupo de recursos en Azure).
+
+    La relación padre/hijos es autorreferencial (padre_id apunta a otro AmbitoNodo).
+    proveedor_ref_id es el ID nativo del proveedor y actúa como clave natural para la ingesta idempotente.
+    """
+
     __tablename__ = "ambito_nodo"
 
     # ATRIBUTOS

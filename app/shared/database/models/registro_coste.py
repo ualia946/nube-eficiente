@@ -5,6 +5,8 @@ from datetime import datetime, date
 from app.shared.database.base import Base
 
 class RegistroCoste(Base):
+    """Coste diario de un recurso en una moneda dada. Es la serie temporal principal de la plataforma."""
+
     __tablename__ = "registro_coste"
 
     id: Mapped[int] = mapped_column(
